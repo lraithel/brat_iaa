@@ -1,4 +1,4 @@
-__author__ = 'Aleksandar Savkov'
+__author__ = "Aleksandar Savkov"
 
 """This module holds data structure classes and relevant methods for parsing
 and manipulating brat annotation files.0
@@ -8,8 +8,7 @@ import logging
 
 
 class BratComment(object):
-    """Brat comment container
-    """
+    """Brat comment container"""
 
     def __init__(self, commentstr):
         """Creates a new object from a comment line from a brat annotation file.
@@ -30,13 +29,13 @@ class BratComment(object):
         items = c.split("\t")
         rid = items[0]
         note = items[2]
-        ref = items[1].rsplit(' ', 1)[-1]
+        ref = items[1].rsplit(" ", 1)[-1]
         return rid, note, ref
 
     def __str__(self):
-        return "{0}\tAnnotatorNotes {1}\t{2}\n".format(str(self.id),
-                                                       str(self.recordref),
-                                                       self.note)
+        return "{0}\tAnnotatorNotes {1}\t{2}\n".format(
+            str(self.id), str(self.recordref), self.note
+        )
 
     def __eq__(self, other):
         """Returns `True` if the other object is of type `BratComment` and the
@@ -67,13 +66,11 @@ class BratComment(object):
 
 
 class BratAnnotation(object):
-    """Brat annotation usually recorded on a single line in a .ann file.
-    """
+    """Brat annotation usually recorded on a single line in a .ann file."""
 
     def __init__(self, s):
         self.comment = None
-        self.id, self.tag, self.boundaries, self.content = \
-            self._parse_annotation(s)
+        self.id, self.tag, self.boundaries, self.content = self._parse_annotation(s)
 
     @staticmethod
     def _parse_annotation(a):
@@ -110,7 +107,8 @@ class BratAnnotation(object):
         """
         if self.comment and comment:
             self.comment.note = "Comment 1: {0} Comment 2: {1}".format(
-                self.comment.note.replace("\n", ""), comment.note)
+                self.comment.note.replace("\n", ""), comment.note
+            )
         elif comment:
             self.comment = comment
             self.comment.recordref = self.id
@@ -140,26 +138,31 @@ class BratAnnotation(object):
         :return: right border index
         :rtype: int
         """
-        return (int(self.boundaries[-1][1])-1
-                if inclusive
-                else int(self.boundaries[-1][1]))
+        return (
+            int(self.boundaries[-1][1]) - 1
+            if inclusive
+            else int(self.boundaries[-1][1])
+        )
 
     def __str__(self):
         comment_str = str(self.comment) if self.comment else ""
-        return "{0}\t{1} {2}\t{3}\n{4}".format(str(self.id), self.tag,
-                                               ";".join([" ".join(b)
-                                                         for b
-                                                         in self.boundaries]),
-                                               self.content, comment_str)
+        return "{0}\t{1} {2}\t{3}\n{4}".format(
+            str(self.id),
+            self.tag,
+            ";".join([" ".join(b) for b in self.boundaries]),
+            self.content,
+            comment_str,
+        )
 
     def __repr__(self):
         comment_str = "; {0}".format(str(self.comment)) if self.comment else ""
-        return "{0}\t{1} {2}\t{3}{4}".format(str(self.id),
-                                             self.tag,
-                                             ";".join([" ".join(b)
-                                                       for b
-                                                       in self.boundaries]),
-                                             self.content, comment_str)
+        return "{0}\t{1} {2}\t{3}{4}".format(
+            str(self.id),
+            self.tag,
+            ";".join([" ".join(b) for b in self.boundaries]),
+            self.content,
+            comment_str,
+        )
 
     def __eq__(self, other):
         """Returns True if the following attributes of both objects are the
@@ -211,26 +214,27 @@ class BratDocument(dict):
             with open(fp) as doc:
                 self._parse_document(doc, no_newline=no_newline)
         elif string:
-            self._parse_document(string.split('\n'), no_newline=no_newline)
+            self._parse_document(string.split("\n"), no_newline=no_newline)
 
     def _parse_document(self, doc, no_newline):
         """
         Parse an annotation document by iterating over its lines
         """
         for line in doc:
+            print(f"line: {line}")
             if no_newline:
                 line = line.strip()
             if line.startswith("#"):
                 comment = BratComment(line)
                 self[comment.recordref].set_comment(comment)
-            elif line[0] in 'RAE':
+            elif line[0] in "RAE":
                 # annotations that are not handled ATM
                 continue
-            elif line.startswith('T'):
+            elif line.startswith("T"):
                 ann = BratAnnotation(line)
                 self[ann.id] = ann
             else:
-                raise ValueError('Unknown beginning of line')
+                raise ValueError("Unknown beginning of line")
 
     def filter_tags(self, filters, positive_polarity=True):
         """Filter annotations in this document
@@ -256,10 +260,7 @@ class BratDocument(dict):
                 ann.tag = escaped_tags_dict[ann.tag]
 
     def remove_duplicates(self):
-        """Removes duplicate annotations in this document.
-
-
-        """
+        """Removes duplicate annotations in this document."""
         duplicates = []
         for key in self.keys():
             if key in duplicates:
@@ -283,16 +284,15 @@ class BratDocument(dict):
         for key in self.keys():
             if key == target_key:
                 continue
-            if (self[key].boundaries == self[target_key].boundaries and
-                    self[key].tag == self[target_key].tag):
+            if (
+                self[key].boundaries == self[target_key].boundaries
+                and self[key].tag == self[target_key].tag
+            ):
                 duplicates.append(key)
         return duplicates
 
     def enumerate_comments(self):
-        """Enumerate all comments attached to annotations in this document.
-
-
-        """
+        """Enumerate all comments attached to annotations in this document."""
         comment_id = 1
         for record in self.values():
             if record.comment:

@@ -1,10 +1,10 @@
-import os
 import glob
-import ntpath
 import logging
+import ntpath
+import os
 
 
-__author__ = 'Aleksandar Savkov'
+__author__ = "Aleksandar Savkov"
 
 """This module groups data structure classes necessary for the calculation of
 inter-annotator agreement (IAA) of two sets of parallel annotations. The main
@@ -28,8 +28,7 @@ def safe_division(a, b):
         return 0.0
 
 
-def standard_logger(name='bratutils', log_path=None, log_level=logging.INFO):
-
+def standard_logger(name="bratutils", log_path=None, log_level=logging.INFO):
     # create logger
     logger = logging.getLogger(name)
 
@@ -41,7 +40,7 @@ def standard_logger(name='bratutils', log_path=None, log_level=logging.INFO):
     h.setLevel(log_level)
 
     # set the format
-    formatter = logging.Formatter('%(asctime)s :: %(message)s')
+    formatter = logging.Formatter("%(asctime)s :: %(message)s")
     h.setFormatter(formatter)
 
     # add the handlers to the logger
@@ -61,7 +60,7 @@ def standard_logger(name='bratutils', log_path=None, log_level=logging.INFO):
     return logger
 
 
-logger = standard_logger(name='agreement', log_level=logging.DEBUG)
+logger = standard_logger(name="agreement", log_level=logging.DEBUG)
 
 
 class Comparison:
@@ -70,10 +69,7 @@ class Comparison:
     """
 
     def __init__(self):
-        """All attributes are initialised as `False`.
-
-
-        """
+        """All attributes are initialised as `False`."""
         self.borders = False
         self.tag = False
         self.partial = False
@@ -92,9 +88,7 @@ class Comparison:
         return True
 
     def __str__(self):
-        return str({"borders": self.borders,
-                    "tag": self.tag,
-                    "partial": self.partial})
+        return str({"borders": self.borders, "tag": self.tag, "partial": self.partial})
 
 
 class MucTable:
@@ -112,8 +106,23 @@ class MucTable:
     MISSING = 4
     SPURIOUS = 5
 
-    _tsvkeys = ["pos", "act", "cor", "par", "inc", "mis", "spu", "pre", "rec",
-                "fsc", "und", "ovg", "sub", "bor", "ibo"]
+    _tsvkeys = [
+        "pos",
+        "act",
+        "cor",
+        "par",
+        "inc",
+        "mis",
+        "spu",
+        "pre",
+        "rec",
+        "fsc",
+        "und",
+        "ovg",
+        "sub",
+        "bor",
+        "ibo",
+    ]
 
     def __init__(self):
         self.comparison = None
@@ -160,8 +169,7 @@ class MucTable:
             self.pre = safe_division(float(self.cor + self.par), self.act)
             self.und = safe_division(float(self.mis), self.pos)
             self.ovg = safe_division(float(self.spu), self.act)
-            self.sub = safe_division(float(self.inc),
-                                     (self.cor + self.par + self.inc))
+            self.sub = safe_division(float(self.inc), (self.cor + self.par + self.inc))
         elif comparison_type == self.STRICT_COMPARISON:
             self.pos = self.cor + self.par + self.inc + self.mis
             self.act = self.cor + self.par + self.inc + self.spu
@@ -170,8 +178,9 @@ class MucTable:
             self.und = safe_division(float(self.mis), self.pos)
             self.ovg = safe_division(float(self.spu), self.act)
             try:
-                self.sub = (float((self.inc + self.par)) /
-                            (self.cor + self.par + self.inc))
+                self.sub = float((self.inc + self.par)) / (
+                    self.cor + self.par + self.inc
+                )
             except ZeroDivisionError:
                 self.sub = 0.0
         elif comparison_type == self.BORDER_COMPARISON:
@@ -186,8 +195,10 @@ class MucTable:
             print("Something's wrong!")
 
         try:
-            self.fsc = 2.0 * (float(float(self.pre) * float(self.rec)) /
-                              float(float(self.pre) + float(self.rec)))
+            self.fsc = 2.0 * (
+                float(float(self.pre) * float(self.rec))
+                / float(float(self.pre) + float(self.rec))
+            )
         except ZeroDivisionError:
             self.fsc = 0.0
 
@@ -236,7 +247,7 @@ class MucTable:
             ["pos", "act", "cor", "par", "inc", "mis", "spu"],
             ["pre", "rec", "fsc"],
             ["und", "ovg", "sub"],
-            ["bor", "ibo"]
+            ["bor", "ibo"],
         ]
         blocks = []
         line = "\n------------------------------------------------\n"
@@ -244,9 +255,13 @@ class MucTable:
         blocks.append(title_line)
         for keychain in keychains:
             blocks.append(
-                "\n".join(["%s:%s" % (str(key), str(self.__dict__.get(key)))
-                           for key
-                           in keychain]))
+                "\n".join(
+                    [
+                        "%s:%s" % (str(key), str(self.__dict__.get(key)))
+                        for key in keychain
+                    ]
+                )
+            )
         blocks.append(line)
         return line.join(blocks)
 
@@ -259,7 +274,7 @@ class Annotation:
     annotation, along with information about its comparison status.
     """
 
-    def __init__(self, a):
+    def __init__(self, a, type_filter=[]):
         """Constructs an Annotation object from a brat annotation line string.
 
         :param a: annotation line string
@@ -275,19 +290,41 @@ class Annotation:
         self.comp_match = None
         self.border_status = False
         self.border_match = None
+        self.type_filter = type_filter
 
-        self.text, self.tag_name, self.start_idx, self.end_idx = \
-            self._parse_annotation(a)
+        self.text, self.tag_name, self.start_idx, self.end_idx = self._parse_annotation(
+            a
+        )
 
     @staticmethod
     def _parse_annotation(a):
         items = a.split("\t")
-        text = items[2].strip("\n").strip(" ")
-        subitems = items[1].split(" ")
-        tag_name = subitems[0]
-        start_idx = int(subitems[1])
-        end_idx = int(subitems[2])
-        return text, tag_name, start_idx, end_idx
+
+        # T4    DISORDER 179 184;207 213    3kilo runter
+        if items[0].startswith("T"):
+            text = items[2].strip("\n").strip(" ")
+
+            # if there are discontinuous entities, we simply glue them together
+            if ";" in items[1]:
+                subitems = items[1].split(" ")
+
+                end_1, start_1 = subitems[2].split(";")
+
+                tag_name = subitems[0]
+                start_idx = int(subitems[1])
+                end_idx = int(subitems[3])
+
+            else:
+                subitems = items[1].split(" ")
+                tag_name = subitems[0]
+                start_idx = int(subitems[1])
+                end_idx = int(subitems[2])
+
+            return text, tag_name, start_idx, end_idx
+
+        # R6    CAUSED Arg1:T3 Arg2:T5
+        elif items[0].startswith("R"):
+            pass
 
     def reset_markers(self):
         """Resets the comparison marker attributes to default values. The
@@ -343,21 +380,28 @@ class Annotation:
         :rtype: bool
         """
         comp = Comparison()
-        if (self.start_idx == parallel_ann.start_idx and
-                self.end_idx == parallel_ann.end_idx):
+        if (
+            self.start_idx == parallel_ann.start_idx
+            and self.end_idx == parallel_ann.end_idx
+        ):
             comp.borders = True
         if self.tag_name == parallel_ann.tag_name:
             comp.tag = True
         if comp.borders and comp.tag:
             return comp
-        tag_contained_in_gold = \
-            (parallel_ann.start_idx <= self.start_idx < parallel_ann.end_idx or
-             parallel_ann.start_idx < self.end_idx <= parallel_ann.end_idx)
-        tag_span_over_gold = (self.start_idx < parallel_ann.start_idx and
-                              self.end_idx > parallel_ann.end_idx)
-        if ((tag_contained_in_gold or tag_span_over_gold) and
-                self.tag_name == parallel_ann.tag_name and
-                not parallel_ann.partiallyMatched):
+        tag_contained_in_gold = (
+            parallel_ann.start_idx <= self.start_idx < parallel_ann.end_idx
+            or parallel_ann.start_idx < self.end_idx <= parallel_ann.end_idx
+        )
+        tag_span_over_gold = (
+            self.start_idx < parallel_ann.start_idx
+            and self.end_idx > parallel_ann.end_idx
+        )
+        if (
+            (tag_contained_in_gold or tag_span_over_gold)
+            and self.tag_name == parallel_ann.tag_name
+            and not parallel_ann.partiallyMatched
+        ):
             parallel_ann.partially_matched = True
             comp.partial = True
         return comp
@@ -370,8 +414,10 @@ class Annotation:
         :return: True if objects coincide
         :rtype: bool
         """
-        return (self.start_idx == parallel_ann.start_idx and
-                self.end_idx == parallel_ann.end_idx)
+        return (
+            self.start_idx == parallel_ann.start_idx
+            and self.end_idx == parallel_ann.end_idx
+        )
 
     def contains_ann(self, other_ann):
         """Checks if this object's annotation contains another object's
@@ -381,8 +427,9 @@ class Annotation:
         :return: True if this annotaion contains the other annotation
         :rtype: bool
         """
-        return (other_ann.start_idx >= self.start_idx and
-                other_ann.end_idx <= self.end_idx)
+        return (
+            other_ann.start_idx >= self.start_idx and other_ann.end_idx <= self.end_idx
+        )
 
     def is_contained_by(self, parallel_ann):
         """Checks if this annotation is contained by a parallel annotation.
@@ -391,8 +438,10 @@ class Annotation:
         :return: True if contained in `parallel_ann`
         :rtype: bool
         """
-        return (parallel_ann.start_idx <= self.start_idx and
-                parallel_ann.end_idx >= self.end_idx)
+        return (
+            parallel_ann.start_idx <= self.start_idx
+            and parallel_ann.end_idx >= self.end_idx
+        )
 
     def is_partial_to(self, parallel_ann):
         """Returns `True` if the annotation is a partial match to the parallel
@@ -404,9 +453,11 @@ class Annotation:
         :param parallel_ann:
         :return:
         """
-        return (self.start_idx > parallel_ann.start_idx and
-                self.end_idx == parallel_ann.end_idx and
-                self.tag_name == parallel_ann.tag_name)
+        return (
+            self.start_idx > parallel_ann.start_idx
+            and self.end_idx == parallel_ann.end_idx
+            and self.tag_name == parallel_ann.tag_name
+        )
 
     def get_same_anns(self, parallel_anns):
         """Returns a list of parallel annotations with that match this
@@ -420,7 +471,7 @@ class Annotation:
         for ann in parallel_anns:
             if self == ann:
                 same.append(ann)
-                logger.debug('Matching annotations: {} : {}'.format(self, ann))
+                logger.debug("Matching annotations: {} : {}".format(self, ann))
         return same
 
     def get_coinciding_anns(self, parallel_anns):
@@ -434,8 +485,7 @@ class Annotation:
         for ann in parallel_anns:
             if self.coincides_with(ann):
                 coinciding.append(ann)
-                logger.debug('Coinciding annotations: {} : {}'
-                             .format(self, ann))
+                logger.debug("Coinciding annotations: {} : {}".format(self, ann))
         return coinciding
 
     def get_contained_anns(self, parallel_anns):
@@ -449,7 +499,7 @@ class Annotation:
         for ann in parallel_anns:
             if self.contains_ann(ann):
                 contained.append(ann)
-                logger.debug('`{}` contained in `{}`'.format(ann, self))
+                logger.debug("`{}` contained in `{}`".format(ann, self))
         return contained
 
     def get_containing_ann(self, parallel_anns):
@@ -473,21 +523,23 @@ class Annotation:
         :return: True if the annotations overlap
         :rtype: bool
         """
-        if (parallel_ann.end_idx < self.start_idx or
-                self.end_idx < parallel_ann.start_idx):
+        if (
+            parallel_ann.end_idx < self.start_idx
+            or self.end_idx < parallel_ann.start_idx
+        ):
             return False
         elif self == parallel_ann:
             return True
         else:
             # TODO check indexes in cases like 'I'
-            tag_contained_in_gold = (parallel_ann.start_idx <=
-                                     self.start_idx <
-                                     parallel_ann.end_idx or
-                                     parallel_ann.start_idx <
-                                     self.end_idx <=
-                                     parallel_ann.end_idx)
-            tag_span_over_gold = (self.start_idx <= parallel_ann.start_idx and
-                                  self.end_idx >= parallel_ann.end_idx)
+            tag_contained_in_gold = (
+                parallel_ann.start_idx <= self.start_idx < parallel_ann.end_idx
+                or parallel_ann.start_idx < self.end_idx <= parallel_ann.end_idx
+            )
+            tag_span_over_gold = (
+                self.start_idx <= parallel_ann.start_idx
+                and self.end_idx >= parallel_ann.end_idx
+            )
             return tag_contained_in_gold or tag_span_over_gold
 
     def get_overlapping_anns(self, parallel_anns):
@@ -511,10 +563,14 @@ class Annotation:
         :return: True if parallel annotation is a partial match
         :rtype: bool
         """
-        tag_contained_in_gold = (parallel_ann.start_idx <= self.start_idx and
-                                 self.end_idx <= parallel_ann.end_idx)
-        tag_span_over_gold = (self.start_idx <= parallel_ann.start_idx and
-                              parallel_ann.end_idx <= self.end_idx)
+        tag_contained_in_gold = (
+            parallel_ann.start_idx <= self.start_idx
+            and self.end_idx <= parallel_ann.end_idx
+        )
+        tag_span_over_gold = (
+            self.start_idx <= parallel_ann.start_idx
+            and parallel_ann.end_idx <= self.end_idx
+        )
         return tag_contained_in_gold or tag_span_over_gold
 
     def is_right_from(self, ann):
@@ -533,8 +589,10 @@ class Annotation:
         :return: True if in the index range
         :rtype: bool
         """
-        return (idx_range[0] <= self.start_idx <= idx_range[1] or
-                idx_range[0] <= self.end_idx <= idx_range[1])
+        return (
+            idx_range[0] <= self.start_idx <= idx_range[1]
+            or idx_range[0] <= self.end_idx <= idx_range[1]
+        )
 
     def __eq__(self, ann):
         """Checks if this object is the same as `ann`. Objects are considered
@@ -545,36 +603,34 @@ class Annotation:
         :return: True if objects are the same
         :rtype: bool
         """
-        return (self.text == ann.text and
-                self.start_idx == ann.start_idx and
-                self.end_idx == ann.end_idx and
-                self.tag_name == ann.tag_name)
+        return (
+            self.text == ann.text
+            and self.start_idx == ann.start_idx
+            and self.end_idx == ann.end_idx
+            and self.tag_name == ann.tag_name
+        )
 
     def __str__(self):
-        atts = [self.tag_name, str(self.start_idx), str(self.end_idx),
-                self.text]
+        atts = [self.tag_name, str(self.start_idx), str(self.end_idx), self.text]
         return " ".join(atts)
 
     def __repr__(self):
-        atts = [self.tag_name, str(self.start_idx), str(self.end_idx),
-                self.text]
+        atts = [self.tag_name, str(self.start_idx), str(self.end_idx), self.text]
         return " ".join(atts)
 
 
 class Filter:
-    """Filters the entries in a Document object based on tag, borders or id.
-    """
+    """Filters the entries in a Document object based on tag, borders or id."""
 
-    TAG_FILTER = 'tag'
-    BORDER_FILTER = 'border'
-    ID_FILTER = 'id'
+    TAG_FILTER = "tag"
+    BORDER_FILTER = "border"
+    ID_FILTER = "id"
 
     def __init__(self, name, filter_type, scope, positive_polarity):
-
         self._filter_funcs = {
             self.TAG_FILTER: self._filter_tags,
             self.BORDER_FILTER: self._filter_borders,
-            self.ID_FILTER: self._filter_ids
+            self.ID_FILTER: self._filter_ids,
         }
 
         try:
@@ -597,9 +653,9 @@ class Filter:
         new_tags = []
         for tag in document.postag_list:
             for filter_tag in self.conditions:
-                if ((self.positive_polarity and tag.tag_name == filter_tag) or
-                        (not self.positive_polarity and
-                            tag.tag_name is not filter_tag)):
+                if (self.positive_polarity and tag.tag_name == filter_tag) or (
+                    not self.positive_polarity and tag.tag_name is not filter_tag
+                ):
                     new_tags.append(tag)
         document.postag_list = new_tags
 
@@ -608,8 +664,9 @@ class Filter:
         for tag in document.postag_list:
             for condition in self.conditions:
                 in_range = tag.in_range(condition)
-                if ((self.positive_polarity and not in_range) or
-                        (not self.positive_polarity and in_range)):
+                if (self.positive_polarity and not in_range) or (
+                    not self.positive_polarity and in_range
+                ):
                     new_tags.append(tag)
                 else:
                     pass
@@ -624,7 +681,7 @@ class Document:
     annotation document (.ann file).
     """
 
-    def __init__(self, fp=None, ann_list=None):
+    def __init__(self, fp=None, ann_list=None, type_filter=[]):
         """Constructs a `Document` object from an annotation file using `fp` or
         using a collection of Annotation objects in `ann_list`.
 
@@ -642,19 +699,29 @@ class Document:
             self.basename = os.path.basename(fp)
             with open(fp) as doc:
                 for line in doc:
-                    if not line.startswith("#"):
-                        self.tags.append(Annotation(line))
+                    if not (
+                        line.startswith("#")
+                        or line.startswith("R")
+                        or line.startswith("A")
+                    ):
+                        anno = Annotation(line, type_filter=type_filter)
+
+                        if type_filter != []:
+                            if anno.tag_name in type_filter:
+                                self.tags.append(anno)
+                        else:
+                            self.tags.append(anno)
         elif ann_list:
             for line in ann_list:
                 if not line.startswith("#"):
                     self.tags.append(Annotation(line))
         else:
             self.tags = []
+
         self.sort()
 
     def sort(self):
-        """Sort annotations in this document by their starting index.
-        """
+        """Sort annotations in this document by their starting index."""
 
         self.tags.sort(key=lambda tag: tag.start_idx)
 
@@ -683,11 +750,11 @@ class Document:
                 tag.comp_status = MucTable.CORRECT
                 ctag.comp_status = MucTable.CORRECT
                 muc.cor += 1
-                logger.debug('Correct match: {} : {}'.format(tag, ctag))
+                logger.debug("Correct match: {} : {}".format(tag, ctag))
             else:
                 ctag.comp_status = MucTable.INCORRECT
                 muc.inc += 1
-                logger.debug('Incorrect match: {} : {}'.format(tag, ctag))
+                logger.debug("Incorrect match: {} : {}".format(tag, ctag))
         if tag.comp_status != MucTable.CORRECT:
             tag.comp_status = MucTable.INCORRECT
 
@@ -703,12 +770,12 @@ class Document:
                     ctag.comp_status = MucTable.PARTIAL
                     par = 1
                 muc.par += par
-                logger.debug('Patrtial match: {} : {}'.format(tag, ctag))
+                logger.debug("Partial match: {} : {}".format(tag, ctag))
 
     @staticmethod
     def handle_containing_tags(tag, ctags, muc):
         for ctag in ctags:
-            logger.debug('`{}` :contains: `{}`'.format(ctag, tag))
+            logger.debug("`{}` :contains: `{}`".format(ctag, tag))
             if tag.is_partial_to(ctag):
                 par = 0
                 if tag.comp_status != MucTable.CORRECT:
@@ -718,7 +785,7 @@ class Document:
                     ctag.comp_status = MucTable.PARTIAL
                     par = 1
                 muc.par += par
-                logger.debug('Partial match: `{}` in `{}`'.format(tag, ctag))
+                logger.debug("Partial match: `{}` in `{}`".format(tag, ctag))
 
     @staticmethod
     def count_remaining(parallel_annotations):
@@ -737,16 +804,18 @@ class Document:
         """
         muc = MucTable()
 
-        logger.debug('File: {}'.format(self.basename))
-        logger.debug('Annotations A: {}\tAnnotations B: {}'
-                     .format(len(self.tags), len(parallel_doc.tags)))
+        logger.debug("File: {}".format(self.basename))
+        logger.debug(
+            "Annotations A: {}\tAnnotations B: {}".format(
+                len(self.tags), len(parallel_doc.tags)
+            )
+        )
 
         self.sort()
         parallel_doc.sort()
         self.remove_duplicates()
         parallel_doc.remove_duplicates()
         for tag in self.tags:
-
             # tags with coinciding indices
             coinciding_tags = tag.get_coinciding_anns(parallel_doc.tags)
             if coinciding_tags:
@@ -773,8 +842,7 @@ class Document:
         return muc
 
     def remove_duplicates(self):
-        """Removes duplicate annotations in this document.
-        """
+        """Removes duplicate annotations in this document."""
 
         for tag in self.tags:
             equal_tags = tag.get_same_anns(self.tags)
@@ -793,8 +861,7 @@ class Document:
             doc_filter.apply_filter(self)
 
     def reset_markers(self):
-        """Reset markers of all annotations in this document.
-        """
+        """Reset markers of all annotations in this document."""
         for tag in self.tags:
             tag.reset_markers()
 
@@ -806,9 +873,9 @@ class Document:
 
 
 class DocumentCollection:
-    """A collection of annotation documents.
-    """
-    def __init__(self, document_dir_path, ext='ann'):
+    """A collection of annotation documents."""
+
+    def __init__(self, document_dir_path, ext="ann", type_filter=[]):
         """All annotation document files (default: .ann) located in a folder or
         one of its subfolders are included in this object.
 
@@ -818,13 +885,15 @@ class DocumentCollection:
         if not os.path.isdir(document_dir_path):
             raise IOError("The %s does not exist." % document_dir_path)
         if os.listdir(document_dir_path) is []:
-            raise ValueError("Empty Document Collection directory: %s"
-                             % document_dir_path)
+            raise ValueError(
+                "Empty Document Collection directory: %s" % document_dir_path
+            )
         self.documents = {}
         files = glob.glob(os.path.join(document_dir_path, "*.%s" % ext))
         for fileName in files:
-            self.documents[ntpath.basename(fileName)] = \
-                Document(fp=fileName)
+            self.documents[ntpath.basename(fileName)] = Document(
+                fp=fileName, type_filter=type_filter
+            )
 
     @property
     def correct(self):
@@ -864,7 +933,7 @@ class DocumentCollection:
 
     @property
     def spurious(self):
-        """List of lists of spurious annoations from this document collection.
+        """List of lists of spurious annotations from this document collection.
 
 
         :return: spurious annotations
@@ -876,7 +945,7 @@ class DocumentCollection:
 
     @property
     def missing(self):
-        """List of lists of missing annoations from this document collection.
+        """List of lists of missing annotations from this document collection.
 
 
         :return: missing annotations
@@ -887,26 +956,17 @@ class DocumentCollection:
         return missing
 
     def make_gold(self):
-        """Set all annoations in all document as gold standard.
-
-
-        """
+        """Set all annoations in all document as gold standard."""
         for doc in self.documents.values():
             doc.make_gold()
 
     def reverse_gold(self):
-        """Reverse gold standard of all annoation in all document.
-
-
-        """
+        """Reverse gold standard of all annotation in all document."""
         for doc in self.documents.values():
             doc.reverse_gold()
 
     def reset_markers(self):
-        """Reset all markers of all annoations in all documents.
-
-
-        """
+        """Reset all markers of all annotations in all documents."""
         for doc in self.documents.values():
             doc.reset_markers()
 
@@ -939,9 +999,12 @@ class DocumentCollection:
             document.filter_document(filters)
 
     def __str__(self):
-        return "".join(["%s\n\n%s\n" % (key, self.documents.get(key))
-                        for key
-                        in self.documents.keys()])
+        return "".join(
+            [
+                "%s\n\n%s\n" % (key, self.documents.get(key))
+                for key in self.documents.keys()
+            ]
+        )
 
     def __repr__(self):
         return str(self)
